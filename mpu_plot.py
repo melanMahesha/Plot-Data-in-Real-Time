@@ -5,12 +5,11 @@ import matplotlib.pyplot as plt
 # -----------------------------
 # 1) Configure your serial port
 # -----------------------------
-PORT_NAME = 'COM11'
+PORT_NAME = 'COM11'  # Update as needed (e.g., 'COM3' on Windows, '/dev/ttyUSB0' on Linux)
 BAUD_RATE = 115200
 
-# Open serial port
 ser = serial.Serial(PORT_NAME, BAUD_RATE, timeout=1)
-time.sleep(2)  # Give the connection a second to settle
+time.sleep(2)  # Allow time for the connection to settle
 
 # -----------------------------
 # 2) Prepare lists for the data
@@ -25,17 +24,17 @@ start_time = time.time()
 # -----------------------------
 # 3) Setup live plotting
 # -----------------------------
-plt.ion()  # Interactive mode ON
+plt.ion()  # Enable interactive mode
 fig, ax = plt.subplots()
 
-# We'll create 3 lines for X, Y, Z
+# Create 3 lines for X, Y, Z data
 line_x, = ax.plot([], [], label='Acc X')
 line_y, = ax.plot([], [], label='Acc Y')
 line_z, = ax.plot([], [], label='Acc Z')
 
 ax.set_xlabel('Time (s)')
 ax.set_ylabel('Acceleration (m/s^2)')
-ax.set_title('Real-Time Acceleration from MPU6050')
+ax.set_title('Real-Time Accelerationy')
 ax.legend()
 plt.show()
 
@@ -46,10 +45,8 @@ try:
     while True:
         line = ser.readline().decode('utf-8').strip()
         if line.startswith("X:"):
-            # Expected format: X:0.08 Y:-0.56 Z:8.38
-            # Remove labels: "X:", "Y:", "Z:"
+            # Expected format: "X:0.08 Y:-0.56 Z:8.38"
             clean_line = line.replace("X:", "").replace("Y:", "").replace("Z:", "")
-            # Now we should have something like: "0.08 -0.56 8.38"
             parts = clean_line.split()
             
             if len(parts) == 3:
@@ -58,33 +55,36 @@ try:
                     ay_val = float(parts[1])
                     az_val = float(parts[2])
                     
-                    # Time since start of script
                     current_time = time.time() - start_time
-                    
-                    # Append to lists
                     times.append(current_time)
                     accX_list.append(ax_val)
                     accY_list.append(ay_val)
                     accZ_list.append(az_val)
                     
-                    # Update plot data
-                    line_x.set_xdata(times)
-                    line_x.set_ydata(accX_list)
-                    line_y.set_xdata(times)
-                    line_y.set_ydata(accY_list)
-                    line_z.set_xdata(times)
-                    line_z.set_ydata(accZ_list)
+                    # Remove data older than 6 seconds
+                    while times and times[0] < current_time - 6:
+                        times.pop(0)
+                        accX_list.pop(0)
+                        accY_list.pop(0)
+                        accZ_list.pop(0)
                     
-                    # Rescale axes
+                    # Update the plot data
+                    line_x.set_data(times, accX_list)
+                    line_y.set_data(times, accY_list)
+                    line_z.set_data(times, accZ_list)
+                    
+                    # Set x-axis to show only last 6 seconds
+                    ax.set_xlim(max(0, current_time - 6), current_time)
+                    
+                    # Optionally adjust y-axis if needed
                     ax.relim()
-                    ax.autoscale_view()
+                    ax.autoscale_view(True, True, True)
                     
-                    # Redraw the figure
                     plt.draw()
                     plt.pause(0.01)
                 
                 except ValueError:
-                    pass  # Ignore lines that don't parse properly
+                    pass  # Skip this line if there's a parsing error
 
 except KeyboardInterrupt:
     print("Exiting...")
