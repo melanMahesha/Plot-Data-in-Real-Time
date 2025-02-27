@@ -34,7 +34,7 @@ line_z, = ax.plot([], [], label='Acc Z')
 
 ax.set_xlabel('Time (s)')
 ax.set_ylabel('Acceleration (m/s^2)')
-ax.set_title('Real-Time Accelerationy')
+ax.set_title('Real-Time Acceleration')
 ax.legend()
 plt.show()
 
